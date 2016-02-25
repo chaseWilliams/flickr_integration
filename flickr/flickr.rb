@@ -1,6 +1,7 @@
 #flickr.rb
 require 'rest-client'
-
+require 'redis'
+redis = Redis.new
 #grabs the image url of a pre-specified photo id using Flickr's API.
 module Flickrd
   def grab_photo_url photo_id
@@ -16,42 +17,39 @@ module Flickrd
     end
   end
 
-  def getImg(temp, id) #compares with weather condition codes
+  def determine_photo_id(temp, id) #compares with weather condition codes
     #weather conditions first; highest priority.
     is_foggy = false
-    [701, 721, 741].each {|k| if k == id then is_foggy = true;puts 'yes' end}
-
+    [701, 721, 741].each {|k| if k == id then is_foggy = true end}
+    rain = get_redis_photo 'rain'
+    snow = get_redis_photo 'snow'
+    fog = get_redis_photo 'fog'
+    cold = get_redis_photo 'cold'
+    cool = get_redis_photo 'cool'
+    warm = get_redis_photo 'warm'
+    hot = get_redis_photo 'hot'
+    really_hot = get_redis_photo 'really_hot'
     if (id >= 200 && id < 600) #rain?
-      determine_photo_id @rain[rand(@rain.length)-1]
+      determine_photo_id rain[rand(rain.length)-1]
     elsif id >= 600 && id < 700#snow?
-       determine_photo_id @snow[rand(@snow.length)-1]
+       determine_photo_id snow[rand(snow.length)-1]
     elsif (is_foggy) #fog?
-       determine_photo_id @fog[rand(@fog.length)-1]
+       determine_photo_id fog[rand(fog.length)-1]
     elsif temp <= 10 #cold?
-       determine_photo_id @cold[rand(@cold.length)-1] #this mechanism returns a random photo id from the array.
+       determine_photo_id cold[rand(cold.length)-1] #this mechanism returns a random photo id from the array.
     elsif temp <= 40 #cool?
-       determine_photo_id @cool[rand(@cool.length)-1]
+       determine_photo_id cool[rand(cool.length)-1]
     elsif temp <= 75 #warm?
-       determine_photo_id @warm[rand(@warm.length)-1]
+       determine_photo_id warm[rand(warm.length)-1]
     elsif temp <= 100#hot?
-       determine_photo_id @hot[rand(@hot.length)-1]
+       determine_photo_id hot[rand(hot.length)-1]
     else #probably really hot then.
-       determine_photo_id @really_hot[rand(@really_hot.length)-1]
+       determine_photo_id really_hot[rand(really_hot.length)-1]
     end
   end
+
+  def get_redis_photo key
+    JSON.parse redis.get key
+  end
   module_function :grab_photo_url, :determine_photo_id
-end
-
-
-module ISource
-  # NEED TO MOVE TO REDIS
-  @cold = [23577541545]
-  @fog = [8469962417, 14919486574]
-  @snow = [89074472]
-  @cool = [12043895515, 20342715613]
-  @warm = [3704273935, 3780893961, 16021074821, 6357276861]
-  @hot = [23959664094, 9557006394, 16391611278, 8248259072]
-  @really_hot = [19656910812, 5951751285]
-  @rain = [6845995798, 9615537120, 6133720797, 15274211811]
-  module_function :getImg
 end

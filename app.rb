@@ -15,21 +15,15 @@ class App < Sinatra::Application
       'rain': [6845995798, 9615537120, 6133720797, 15274211811]
     }
     @key = ENV['FLICKR_KEY']
-    @redis_uri = ENV['REDIS_URI']
   end
 
-
-  # Remember that this is a helper function that will process each request (regardless of endpoint) before
-  # processing the get/post/put sections below
   before do
     content_type 'application/json'
-    # [...other code will go here, if needed...]
   end
 
-  # You'll repeat this for each endpoint this app will host and for each HTTP method
   get '/picture' do
-    flickr = FlickrAPI::Proxy.new(@pics, @key, @redis_uri)
-    temp = params[:temperature]
+    flickr = FlickrAPI::Proxy.new(@pics, @key)
+    temp = params[:temperature].to_i
     condition_id = params[:id_number].to_i
     {
       status: 'ok',

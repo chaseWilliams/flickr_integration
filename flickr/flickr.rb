@@ -1,29 +1,33 @@
 module FlickrAPI
   class Proxy
-    def initialize(pics, key, uri)
+    def initialize(pics, key)
       @pics = pics
       @key = key
       @endpoint = 'api.flickr.com/services/rest'
-      @qp = 'method=flickr.photos.getSizes'
-      @redis_uri = uri
+      @method = 'method=flickr.photos.getSizes'
+      @redis = Redis.new(url: ENV['REDIS_URI'])
     end
 
     def grab_photo_url id
-      url = "https://#{@endpoint}/?#{@qp}&api_key=#{@key}&format=json&photo_id=#{id}&nojsoncallback=?"
-      response = JSON.parse RestClient::Request.execute(
-                                url: url,
-                                method: :get,
-                                verify_ssl: false,
-                            )
-      index = nil #default value
+      if @redis.exists(id) == 0
+        url = "https://#{@endpoint}/?#{@method}&api_key=#{@key}&format=json&photo_id=#{id}&nojsoncallback=?"
+        response = JSON.parse RestClient::Request.execute(
+                                  url: url,
+                                  method: :get,
+                                  verify_ssl: false,
+                              )
+        index = nil #default value
 
-      #determines what's the index of the 'Large' image.
-      response['sizes']['size'].each_with_index {|k, i| if k['label'] == 'Large' then index = i; break end}
-      if index.nil? #in case img_index wasn't affected.
-         "https://farm7.staticflickr.com/6217/6357276861_1fdc6fe3d4_b.jpg"
+        #determines what's the index of the 'Large' image.
+        response['sizes']['size'].each_with_index {|k, i| if k['label'] == 'Large' then index = i; break end}
+        if index.nil? #in case img_index wasn't affected.
+           "https://farm7.staticflickr.com/6217/6357276861_1fdc6fe3d4_b.jpg"
+        else
+           picture_url = response['sizes']['size'][index]['source']
+        end
+        @redis.set(id, picture_url)
       else
-         response['sizes']['size'][index]['source']
-      end
+        @redis.get(id)
     end
 
     def get_photo(key)

@@ -2,36 +2,44 @@ module FlickrAPI
   class Proxy
     def initialize(pics, key)
       @pics = pics
-      @key = key
+      @key = '3a86e2e6e0552b135fa3830f8421d07e'
       @endpoint = 'api.flickr.com/services/rest'
       @method = 'method=flickr.photos.getSizes'
       @redis = Redis.new(url: ENV['REDIS_URI'])
+      @logger_out = Logger.new(STDOUT)
+      @logger_err = Logger.new(STDERR)
     end
 
-    def grab_photo_url id
-      if @redis.exists(id) == 0
-        url = "https://#{@endpoint}/?#{@method}&api_key=#{@key}&format=json&photo_id=#{id}&nojsoncallback=?"
+    def grab_photo_url temp, condition_id
+      photo_id = determine_photo_id temp, condition_id
+      if !@redis.exists(photo_id)
+        url = "https://#{@endpoint}/?#{@method}&api_key=#{@key}&format=json&photo_id=#{photo_id}&nojsoncallback=?"
         response = JSON.parse RestClient::Request.execute(
                                   url: url,
                                   method: :get,
                                   verify_ssl: false,
                               )
+        @logger_out.info "Response is #{response.class}, #{response}. First level is #{response[:sizes].class},
+ #{response['sizes'].class}"
         index = nil #default value
-
         #determines what's the index of the 'Large' image.
         response['sizes']['size'].each_with_index {|k, i| if k['label'] == 'Large' then index = i; break end}
-        if index.nil? #in case img_index wasn't affected.
+        if index.nil? #in case img_index wasn't affected, implying no Large image was found
            "https://farm7.staticflickr.com/6217/6357276861_1fdc6fe3d4_b.jpg"
         else
            picture_url = response['sizes']['size'][index]['source']
         end
-        @redis.set(id, picture_url)
-      else
-        @redis.get(id)
-    end
+        @redis.set(photo_id, picture_url)
+        @logger_out.info "Set the url #{picture_url} for photo id #{photo_id} in Redis"
+      end
+      photo_url = @redis.get photo_id
+      @logger_out.info "Got the url #{photo_url}"
+      photo_url
+      end
 
+    private
     def get_photo(key)
-      @pics[key]
+      @pics[key.to_sym]
     end
 
     def determine_photo_id(temp, id)
@@ -51,23 +59,29 @@ module FlickrAPI
       # Evaluate weather condition based on condition_id
       # Compares with weather condition codes
       # Weather conditions first; highest priority.
-      if (id >= 200 && id < 600) #rain?
-        rain[rand(rain.length)-1]
+      if id >= 200 && id < 600 #rain?
+        photo_id_helper rain
       elsif id >= 600 && id < 700#snow?
-        snow[rand(snow.length)-1]
-      elsif (is_foggy) #fog?
-        fog[rand(fog.length)-1]
+        photo_id_helper snow
+      elsif is_foggy #fog?
+        photo_id_helper fog
       elsif temp <= 10 #cold?
-        cold[rand(cold.length)-1] #this mechanism returns a random photo id from the array.
+        photo_id_helper cold #this mechanism returns a random photo id from the array.
       elsif temp <= 40 #cool?
-        cool[rand(cool.length)-1]
+        photo_id_helper cool
       elsif temp <= 75 #warm?
-        warm[rand(warm.length)-1]
+        photo_id_helper warm
       elsif temp <= 100#hot?
-        hot[rand(hot.length)-1]
+        photo_id_helper hot
       else #probably really hot then.
-        really_hot[rand(really_hot.length)-1]
+        photo_id_helper really_hot
       end
+    end
+
+    def photo_id_helper arr
+      photo_id = arr[rand(arr.length)-1]
+      @logger_out.info "selected the photo id #{photo_id}"
+      photo_id
     end
   end
 end

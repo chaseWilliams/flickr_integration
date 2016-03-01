@@ -12,26 +12,28 @@ module FlickrAPI
 
     def grab_photo_url temp, condition_id
       photo_id = determine_photo_id temp, condition_id
-      if !@redis.exists(photo_id)
-        url = "https://#{@endpoint}/?#{@method}&api_key=#{@key}&format=json&photo_id=#{photo_id}&nojsoncallback=?"
-        response = JSON.parse RestClient::Request.execute(
-                                  url: url,
-                                  method: :get,
-                                  verify_ssl: false,
-                              )
-        @logger_out.info "Response is #{response.class}, #{response}. First level is #{response[:sizes].class},
- #{response['sizes'].class}"
-        index = nil #default value
-        #determines what's the index of the 'Large' image.
-        response['sizes']['size'].each_with_index {|k, i| if k['label'] == 'Large' then index = i; break end}
-        if index.nil? #in case img_index wasn't affected, implying no Large image was found
-           "https://farm7.staticflickr.com/6217/6357276861_1fdc6fe3d4_b.jpg"
-        else
-           picture_url = response['sizes']['size'][index]['source']
-        end
-        @redis.set(photo_id, picture_url)
-        @logger_out.info "Set the url #{picture_url} for photo id #{photo_id} in Redis"
+      @logger_out.info 'determine_photo_id called, successfully completed.'
+
+      url = "https://#{@endpoint}/?#{@method}&api_key=#{@key}&format=json&photo_id=#{photo_id}&nojsoncallback=?"
+      @logger_out.info "no existing url, about to send GET request to #{url}"
+      response = JSON.parse RestClient::Request.execute(
+                                url: url,
+                                method: :get,
+                                verify_ssl: false,
+                            )
+      @logger_out.info "Response is #{response.class}, #{response}. First level is #{response['sizes'].class}"
+      index = nil #default value
+      #determines what's the index of the 'Large' image.
+      response['sizes']['size'].each_with_index {|k, i| if k['label'] == 'Large' then index = i; break end}
+      if index.nil? #in case img_index wasn't affected, implying no Large image was found
+         "https://farm7.staticflickr.com/6217/6357276861_1fdc6fe3d4_b.jpg"
+      else
+         picture_url = response['sizes']['size'][index]['source']
       end
+
+      @redis.set(photo_id, picture_url)
+      @logger_out.info "Set the url #{picture_url} for photo id #{photo_id} in Redis"
+
       photo_url = @redis.get photo_id
       @logger_out.info "Got the url #{photo_url}"
       photo_url

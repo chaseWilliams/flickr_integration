@@ -13,9 +13,9 @@ class App < Sinatra::Application
   end
 
   error do
-   status 500
+    status 500
     Logger.new(STDOUT).fatal '500 raised'
-    {status: '500', msg: 'Looks like we done goof\'d'}
+    {status: 'fail', msg: 'Looks like we done goof\'d'}
   end
 
   not_found do
@@ -33,8 +33,8 @@ class App < Sinatra::Application
                                       really_hot: [19656910812, 5951751285],
                                       rain: [6845995798, 9615537120, 6133720797, 15274211811]
                                   }, ENV['FLICKR_KEY'])
-    temp = params[:temperature].to_i
-    condition_id = params[:id_number].to_i
+    temp = params[:temp].to_i
+    condition_id = params[:id].to_i
     Logger.new(STDOUT).info("Paramters understood to be temp: #{temp} and condition_id: #{condition_id}")
     return {
         status: 'ok',
@@ -42,4 +42,3 @@ class App < Sinatra::Application
     }.to_json
   end
 end
-

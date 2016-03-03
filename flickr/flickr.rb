@@ -2,7 +2,7 @@ module FlickrAPI
   class Proxy
     def initialize(pics, key)
       @pics = pics
-      @key = '3a86e2e6e0552b135fa3830f8421d07e'
+      @key = key
       @endpoint = 'api.flickr.com/services/rest'
       @method = 'method=flickr.photos.getSizes'
       @redis = Redis.new(url: ENV['REDIS_URI'])

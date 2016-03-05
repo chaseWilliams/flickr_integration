@@ -32,7 +32,7 @@ class App < Sinatra::Application
                                       hot: [23959664094, 9557006394, 16391611278, 8248259072],
                                       really_hot: [19656910812, 5951751285],
                                       rain: [6845995798, 9615537120, 6133720797, 15274211811]
-                                  }, ENV['FLICKR_KEY'])
+                                  }, '3a86e2e6e0552b135fa3830f8421d07e')
     temp = params[:temp].to_i
     condition_id = params[:id].to_i
     Logger.new(STDOUT).info("Paramters understood to be temp: #{temp} and condition_id: #{condition_id}")

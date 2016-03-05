@@ -4,4 +4,3 @@ gem 'rest-client'
 gem 'sinatra'
 gem 'redis'
 gem 'thin'
-# gem "rails"
